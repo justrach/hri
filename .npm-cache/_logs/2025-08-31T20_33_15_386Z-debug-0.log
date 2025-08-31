@@ -1,0 +1,46 @@
+0 verbose cli /Users/rachpradhan/.nvm/versions/node/v22.14.0/bin/node /Users/rachpradhan/.nvm/versions/node/v22.14.0/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.14.0
+3 silly config load:file:/Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/rachpradhan/hri/.npmrc
+5 silly config load:file:/Users/rachpradhan/.npmrc
+6 silly config load:file:/Users/rachpradhan/.nvm/versions/node/v22.14.0/etc/npmrc
+7 verbose title npm publish
+8 verbose argv "publish" "--cache" ".npm-cache"
+9 verbose logfile logs-max:10 dir:/Users/rachpradhan/hri/.npm-cache/_logs/2025-08-31T20_33_15_386Z-
+10 verbose logfile /Users/rachpradhan/hri/.npm-cache/_logs/2025-08-31T20_33_15_386Z-debug-0.log
+11 silly logfile done cleaning log files
+12 verbose publish [ '.' ]
+13 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+14 notice
+15 notice 📦  hri@0.0.1
+16 notice Tarball Contents
+17 notice 3.0kB README.md
+17 notice 239B dist/core/registry.d.ts
+17 notice 562B dist/core/transport.d.ts
+17 notice 1.9kB dist/core/types.d.ts
+17 notice 703B dist/core/validation.d.ts
+17 notice 872B dist/index.d.ts
+17 notice 7.0kB dist/index.js
+17 notice 23.5kB dist/index.js.map
+17 notice 396B dist/providers/anthropic.d.ts
+17 notice 390B dist/providers/openai.d.ts
+17 notice 990B package.json
+18 notice Tarball Details
+19 notice name: hri
+20 notice version: 0.0.1
+21 notice filename: hri-0.0.1.tgz
+22 notice package size: 11.3 kB
+23 notice unpacked size: 39.5 kB
+24 notice shasum: 95f595f70973ee5a92b6373fe5db36d4484f9639
+25 notice integrity: sha512-+vGY2fzyr8Cr9[...]kPtWRyYCK5Icg==
+26 notice total files: 11
+27 notice
+28 notice Publishing to https://registry.npmjs.org/ with tag latest and default access
+29 http fetch PUT 200 https://registry.npmjs.org/hri 2446ms
+30 verbose cwd /Users/rachpradhan/hri
+31 verbose os Darwin 24.6.0
+32 verbose node v22.14.0
+33 verbose npm  v10.9.2
+34 verbose exit 0
+35 info ok

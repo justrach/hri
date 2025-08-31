@@ -1,0 +1,55 @@
+{
+  "name": "hri",
+  "version": "0.0.1",
+  "description": "HRI: A TypeScript-native, browser/Next.js-friendly multi-LLM client (LiteLLM for JS) with DHI validation",
+  "author": "Rach Pradhan",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/REPO_OWNER/REPO_NAME.git"
+  },
+  "homepage": "https://github.com/REPO_OWNER/REPO_NAME#readme",
+  "bugs": {
+    "url": "https://github.com/REPO_OWNER/REPO_NAME/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.0"
+  },
+  "scripts": {
+    "prepublishOnly": "bun run build",
+    "build:types": "bun x tsc -p tsconfig.build.json",
+    "build:js": "bun build src/index.ts --outdir dist --sourcemap --minify --external dhi",
+    "build": "bun run build:types && bun run build:js",
+    "dev": "bun --watch run build",
+    "example": "bun run examples/node.ts",
+    "release:patch": "npm version patch && npm publish --cache .npm-cache",
+    "release:minor": "npm version minor && npm publish --cache .npm-cache",
+    "release:major": "npm version major && npm publish --cache .npm-cache"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "dhi": "0.2.31"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.11.30"
+  }
+}

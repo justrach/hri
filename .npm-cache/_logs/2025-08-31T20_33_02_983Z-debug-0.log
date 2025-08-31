@@ -1,0 +1,38 @@
+0 verbose cli /Users/rachpradhan/.nvm/versions/node/v22.14.0/bin/node /Users/rachpradhan/.nvm/versions/node/v22.14.0/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.14.0
+3 silly config load:file:/Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/rachpradhan/hri/.npmrc
+5 silly config load:file:/Users/rachpradhan/.npmrc
+6 silly config load:file:/Users/rachpradhan/.nvm/versions/node/v22.14.0/etc/npmrc
+7 verbose title npm view hri name
+8 verbose argv "view" "hri" "name" "--cache" ".npm-cache"
+9 verbose logfile logs-max:10 dir:/Users/rachpradhan/hri/.npm-cache/_logs/2025-08-31T20_33_02_983Z-
+10 verbose logfile /Users/rachpradhan/hri/.npm-cache/_logs/2025-08-31T20_33_02_983Z-debug-0.log
+11 silly logfile done cleaning log files
+12 http fetch GET 404 https://registry.npmjs.org/hri 306ms (cache skip)
+13 verbose stack HttpErrorGeneral: 404 Not Found - GET https://registry.npmjs.org/hri - Not found
+13 verbose stack     at /Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/node_modules/npm-registry-fetch/lib/check-response.js:103:15
+13 verbose stack     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+13 verbose stack     at async RegistryFetcher.packument (/Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/node_modules/pacote/lib/registry.js:90:19)
+13 verbose stack     at async #getData (/Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/lib/commands/view.js:135:20)
+13 verbose stack     at async #viewPackage (/Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/lib/commands/view.js:112:28)
+13 verbose stack     at async View.exec (/Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/lib/commands/view.js:70:5)
+13 verbose stack     at async Npm.exec (/Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/lib/npm.js:207:9)
+13 verbose stack     at async module.exports (/Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/lib/cli/entry.js:74:5)
+14 verbose statusCode 404
+15 verbose pkgid hri@*
+16 error code E404
+17 error 404 Not Found - GET https://registry.npmjs.org/hri - Not found
+18 error 404
+19 error 404  'hri@*' is not in this registry.
+20 error 404
+21 error 404 Note that you can also install from a
+22 error 404 tarball, folder, http url, or git url.
+23 verbose cwd /Users/rachpradhan/hri
+24 verbose os Darwin 24.6.0
+25 verbose node v22.14.0
+26 verbose npm  v10.9.2
+27 verbose exit 1
+28 verbose code 1
+29 error A complete log of this run can be found in: /Users/rachpradhan/hri/.npm-cache/_logs/2025-08-31T20_33_02_983Z-debug-0.log

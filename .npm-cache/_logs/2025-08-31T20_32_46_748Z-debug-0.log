@@ -1,0 +1,19 @@
+0 verbose cli /Users/rachpradhan/.nvm/versions/node/v22.14.0/bin/node /Users/rachpradhan/.nvm/versions/node/v22.14.0/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.14.0
+3 silly config load:file:/Users/rachpradhan/.nvm/versions/node/v22.14.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/rachpradhan/hri/.npmrc
+5 silly config load:file:/Users/rachpradhan/.npmrc
+6 silly config load:file:/Users/rachpradhan/.nvm/versions/node/v22.14.0/etc/npmrc
+7 verbose title npm pack
+8 verbose argv "pack" "--json" "--dry-run" "--cache" ".npm-cache"
+9 verbose logfile logs-max:10 dir:/Users/rachpradhan/hri/.npm-cache/_logs/2025-08-31T20_32_46_748Z-
+10 verbose logfile /Users/rachpradhan/hri/.npm-cache/_logs/2025-08-31T20_32_46_748Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 verbose cwd /Users/rachpradhan/hri
+14 verbose os Darwin 24.6.0
+15 verbose node v22.14.0
+16 verbose npm  v10.9.2
+17 verbose exit 0
+18 info ok
