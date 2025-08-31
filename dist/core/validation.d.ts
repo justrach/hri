@@ -7,6 +7,7 @@ export declare const ChatRequestSchema: import("dhi").ObjectSchema<{
         content: /*elided*/ any;
         name: /*elided*/ any;
         tool_call_id: /*elided*/ any;
+        tool_calls: /*elided*/ any;
     }[];
     temperature: number | undefined;
     max_tokens: number | undefined;

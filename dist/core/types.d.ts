@@ -4,6 +4,7 @@ export interface ChatMessage {
     content: string;
     name?: string;
     tool_call_id?: string;
+    tool_calls?: ToolCall[];
 }
 export interface ToolCall {
     id: string;
@@ -13,6 +14,15 @@ export interface ToolCall {
         arguments: string;
     };
 }
+export interface FunctionToolDef {
+    type: 'function';
+    function: {
+        name: string;
+        description?: string;
+        parameters?: unknown;
+    };
+}
+export type ToolDef = FunctionToolDef;
 export interface ChatRequest {
     provider: ProviderId;
     model: string;
@@ -24,6 +34,13 @@ export interface ChatRequest {
     json?: boolean;
     extraHeaders?: Record<string, string>;
     signal?: AbortSignal;
+    tools?: ToolDef[];
+    tool_choice?: 'auto' | 'none' | 'required' | {
+        type: 'function';
+        function: {
+            name: string;
+        };
+    };
 }
 export interface ChatResponseChoice {
     index: number;

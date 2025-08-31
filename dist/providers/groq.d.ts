@@ -1,6 +1,6 @@
 import type { Provider, ChatRequest, ChatResponse, ChatStreamChunk } from '../core/types';
-export declare class OpenAIProvider implements Provider {
-    id: "openai";
+export declare class GroqProvider implements Provider {
+    id: "groq";
     name: string;
     private isGpt5;
     chat(req: ChatRequest, apiKey?: string, baseUrl?: string): Promise<ChatResponse>;
