@@ -34,22 +34,29 @@
   "scripts": {
     "prepublishOnly": "bun run build",
     "build:types": "bun x tsc -p tsconfig.build.json",
-    "build:js": "bun build src/index.ts --outdir dist --sourcemap --minify --external dhi",
+    "build:js": "bun build src/index.ts --outdir dist --sourcemap --minify --external dhi --external undici",
     "build": "bun run build:types && bun run build:js",
     "dev": "bun --watch run build",
     "example": "bun run examples/node.ts",
+    "bench:node": "node --env-file=.env --import tsx examples/benchmark-openai.ts",
     "release:patch": "npm version patch && npm publish --cache .npm-cache",
     "release:minor": "npm version minor && npm publish --cache .npm-cache",
-    "release:major": "npm version major && npm publish --cache .npm-cache"
+    "release:major": "npm version major && npm publish --cache .npm-cache",
+    "test": "bun test"
   },
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "dhi": "0.2.31"
+    "dhi": "0.2.31",
+    "dotenv": "^17.2.1"
   },
   "devDependencies": {
+    "@types/node": "^20.11.30",
+    "dotenv-cli": "^10.0.0",
+    "openai": "^5.16.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.4.5",
-    "@types/node": "^20.11.30"
+    "undici": "^7.15.0"
   }
 }
