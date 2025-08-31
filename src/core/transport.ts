@@ -12,6 +12,8 @@ export function joinUrl(base: string, path: string): string {
   return `${base.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 }
 
+import { getUndiciDispatcher } from './undici';
+
 export async function http(url: string, opts: RequestOptions = {}): Promise<Response> {
   const { method = 'POST', headers = {}, body, signal } = opts;
   const init: RequestInit = {
@@ -19,7 +21,17 @@ export async function http(url: string, opts: RequestOptions = {}): Promise<Resp
     headers,
     body: typeof body === 'string' || body instanceof Uint8Array ? body : body ? JSON.stringify(body) : undefined,
     signal,
+    // Hint the runtime to reuse connections across sequential requests
+    // to reduce TLS handshake/latency overhead in benchmarks.
+    keepalive: true,
   } as RequestInit;
+
+  // In Node, optionally use undici Pool dispatcher for stronger connection reuse.
+  const dispatcher = await getUndiciDispatcher(url);
+  if (dispatcher) {
+    (init as any).dispatcher = dispatcher;
+  }
+
   return fetch(url, init);
 }
 
