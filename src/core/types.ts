@@ -5,6 +5,8 @@ export interface ChatMessage {
   content: string;
   name?: string;
   tool_call_id?: string;
+  // When assistant triggers tools (OpenAI-compatible)
+  tool_calls?: ToolCall[];
 }
 
 export interface ToolCall {
@@ -12,6 +14,18 @@ export interface ToolCall {
   type: 'function';
   function: { name: string; arguments: string };
 }
+
+// OpenAI-compatible tool definition
+export interface FunctionToolDef {
+  type: 'function';
+  function: {
+    name: string;
+    description?: string;
+    // JSON Schema for parameters
+    parameters?: unknown;
+  };
+}
+export type ToolDef = FunctionToolDef;
 
 export interface ChatRequest {
   provider: ProviderId;
@@ -24,6 +38,9 @@ export interface ChatRequest {
   json?: boolean; // request JSON-structured output if provider supports
   extraHeaders?: Record<string, string>;
   signal?: AbortSignal;
+  // OpenAI-compatible tool support (optional)
+  tools?: ToolDef[];
+  tool_choice?: 'auto' | 'none' | 'required' | { type: 'function'; function: { name: string } };
 }
 
 export interface ChatResponseChoice {

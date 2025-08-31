@@ -27,6 +27,9 @@ function mergeHeaders(a?: Record<string, string>, b?: Record<string, string>): R
 export class OpenAIProvider implements Provider {
   id = 'openai' as const;
   name = 'OpenAI';
+  private isGpt5(model: string): boolean {
+    try { return /(^|\/)gpt-5/i.test(model); } catch { return false; }
+  }
 
   async chat(req: ChatRequest, apiKey?: string, baseUrl?: string): Promise<ChatResponse> {
     const url = joinUrl(baseUrl || DEFAULT_BASE, '/chat/completions');
@@ -43,9 +46,14 @@ export class OpenAIProvider implements Provider {
       messages: req.messages,
       temperature: req.temperature,
       top_p: req.top_p,
-      max_tokens: req.max_tokens,
       stream: false,
     };
+    if (req.max_tokens != null) {
+      if (this.isGpt5(req.model)) (body as any).max_completion_tokens = req.max_tokens;
+      else (body as any).max_tokens = req.max_tokens;
+    }
+    if (req.tools) body.tools = req.tools;
+    if (req.tool_choice) body.tool_choice = req.tool_choice;
     if (req.json) {
       body.response_format = { type: 'json_object' };
     }
@@ -73,9 +81,14 @@ export class OpenAIProvider implements Provider {
       messages: req.messages,
       temperature: req.temperature,
       top_p: req.top_p,
-      max_tokens: req.max_tokens,
       stream: true,
     };
+    if (req.max_tokens != null) {
+      if (this.isGpt5(req.model)) (body as any).max_completion_tokens = req.max_tokens;
+      else (body as any).max_tokens = req.max_tokens;
+    }
+    if (req.tools) body.tools = req.tools;
+    if (req.tool_choice) body.tool_choice = req.tool_choice;
     if (req.json) {
       body.response_format = { type: 'json_object' };
     }
@@ -102,6 +115,16 @@ export class OpenAIProvider implements Provider {
           delta: {
             role: delta.role,
             content: delta.content,
+            tool_calls: Array.isArray(delta.tool_calls)
+              ? delta.tool_calls.map((t: any) => ({
+                  id: t.id ?? String(t.index ?? 0),
+                  type: 'function',
+                  function: {
+                    name: t.function?.name,
+                    arguments: t.function?.arguments ?? '',
+                  },
+                }))
+              : undefined,
           },
           finish_reason: choice?.finish_reason ?? null,
           raw: json,

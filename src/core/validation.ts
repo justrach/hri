@@ -1,11 +1,21 @@
 import { object, string, number, boolean, array, optional, record } from 'dhi';
 import type { ChatMessage, ChatRequest, ProviderId } from './types';
 
+const ToolCallSchema = object({
+  id: string(),
+  type: string(),
+  function: object({
+    name: string(),
+    arguments: string(),
+  }),
+});
+
 const ChatMessageSchema = object({
   role: string(),
   content: string(),
   name: optional(string()),
   tool_call_id: optional(string()),
+  tool_calls: optional(array(ToolCallSchema)),
 });
 
 export const ChatRequestSchema = object({
@@ -35,5 +45,7 @@ export function validateChatRequest(req: unknown): ChatRequest {
   }
   ensureKnownProvider(result.data.provider);
   const signal = (req as any)?.signal as AbortSignal | undefined;
-  return { ...(result.data as any), signal } as ChatRequest;
+  // Preserve passthrough fields not in the strict schema (e.g., tools, tool_choice)
+  const { tools, tool_choice } = (req as any) || {};
+  return { ...(result.data as any), tools, tool_choice, signal } as ChatRequest;
 }
