@@ -31,7 +31,7 @@ export const ChatRequestSchema = object({
 });
 
 export function ensureKnownProvider(id: string): asserts id is ProviderId {
-  const known: ProviderId[] = ['openai', 'anthropic', 'groq', 'gemini', 'openrouter', 'sambanova'];
+  const known: ProviderId[] = ['openai', 'anthropic', 'groq', 'gemini', 'openrouter', 'sambanova', 'cerebras'];
   if (!known.includes(id as ProviderId)) {
     throw new Error(`Unknown provider: ${id}`);
   }

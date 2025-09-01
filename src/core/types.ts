@@ -79,6 +79,8 @@ export interface Provider {
   name: string;
   chat(req: ChatRequest, apiKey?: string, baseUrl?: string): Promise<ChatResponse>;
   streamChat?(req: ChatRequest, apiKey?: string, baseUrl?: string): Stream<ChatStreamChunk>;
+  // Optional: list models (OpenAI v1-compatible)
+  listModels?(apiKey?: string, baseUrl?: string): Promise<string[]>;
 }
 
 export type ProviderId =
@@ -87,7 +89,9 @@ export type ProviderId =
   | 'groq'
   | 'gemini'
   | 'openrouter'
-  | 'sambanova';
+  | 'sambanova'
+  | 'cerebras'
+  | 'v1';
 
 export interface ClientConfig {
   defaultProvider?: ProviderId;

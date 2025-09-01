@@ -1,3 +1,7 @@
 .npm-cache/
 package-lock.json
 *.log
+dist
+node_modules
+.env
+./dist

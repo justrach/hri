@@ -11,12 +11,16 @@ import type {
   ToolCall,
 } from './core/types';
 import { validateChatRequest } from './core/validation';
+import { normalizeProviderModel, type TargetLike } from './core/resolve';
 import { OpenAIProvider } from './providers/openai';
 import { AnthropicProvider } from './providers/anthropic';
 import { GroqProvider } from './providers/groq';
 import { OpenRouterProvider } from './providers/openrouter';
 import { SambaNovaProvider } from './providers/sambanova';
 import { GeminiProvider } from './providers/gemini';
+import { CerebrasProvider } from './providers/cerebras';
+import { V1Provider } from './providers/v1';
+import { http, joinUrl } from './core/transport';
 
 export * from './core/types';
 export { validateChatRequest } from './core/validation';
@@ -27,6 +31,8 @@ export { GroqProvider } from './providers/groq';
 export { OpenRouterProvider } from './providers/openrouter';
 export { SambaNovaProvider } from './providers/sambanova';
 export { GeminiProvider } from './providers/gemini';
+export { CerebrasProvider } from './providers/cerebras';
+export { V1Provider } from './providers/v1';
 
 function env(name: string): string | undefined {
   try {
@@ -46,6 +52,8 @@ function keyFromEnv(provider: ProviderId): string | undefined {
     gemini: 'GEMINI_API_KEY',
     openrouter: 'OPENROUTER_API_KEY',
     sambanova: 'SAMBANOVA_API_KEY',
+    cerebras: 'CEREBRAS_API_KEY',
+    v1: 'V1_API_KEY',
   };
   return env(map[provider]);
 }
@@ -78,6 +86,8 @@ export class HRI {
     hri.use(new OpenRouterProvider());
     hri.use(new SambaNovaProvider());
     hri.use(new GeminiProvider());
+    hri.use(new CerebrasProvider());
+    hri.use(new V1Provider());
     return hri;
   }
 
@@ -99,6 +109,8 @@ export class HRI {
           return `${this.config.proxy.replace(/\/$/, '')}/openai/v1`;
         case 'anthropic':
           return `${this.config.proxy.replace(/\/$/, '')}/anthropic`;
+        case 'v1':
+          return `${this.config.proxy.replace(/\/$/, '')}/v1`;
         default:
           return this.config.proxy;
       }
@@ -106,8 +118,12 @@ export class HRI {
     return defaultBase(provider);
   }
 
-  async chat(req: ChatRequest): Promise<ChatResponse> {
-    const v = validateChatRequest(req);
+  // Overloads for easier DX
+  async chat(target: string, init: Omit<ChatRequest, 'provider' | 'model'>): Promise<ChatResponse>;
+  async chat(req: ChatRequest): Promise<ChatResponse>;
+  async chat(reqOrTarget: ChatRequest | string, init?: Omit<ChatRequest, 'provider' | 'model'>): Promise<ChatResponse> {
+    const normalized = this.normalizeInput(reqOrTarget as any, init as any);
+    const v = validateChatRequest(normalized);
     const provider = this.registry.get(v.provider as ProviderId);
     if (!provider) throw new Error(`Provider not registered: ${v.provider}`);
     const key = this.apiKeyFor(provider.id);
@@ -115,8 +131,12 @@ export class HRI {
     return provider.chat({ ...v, stream: false }, key, base);
   }
 
-  streamChat(req: ChatRequest): AsyncIterable<ChatStreamChunk> {
-    const v = validateChatRequest({ ...req, stream: true });
+  // Overloads for easier DX
+  streamChat(target: string, init: Omit<ChatRequest, 'provider' | 'model'> & { stream?: true }): AsyncIterable<ChatStreamChunk>;
+  streamChat(req: ChatRequest): AsyncIterable<ChatStreamChunk>;
+  streamChat(reqOrTarget: ChatRequest | string, init?: Omit<ChatRequest, 'provider' | 'model'> & { stream?: true }): AsyncIterable<ChatStreamChunk> {
+    const normalized = this.normalizeInput(reqOrTarget as any, { ...(init as any), stream: true });
+    const v = validateChatRequest({ ...normalized, stream: true });
     const provider = this.registry.get(v.provider as ProviderId);
     if (!provider || !provider.streamChat) {
       throw new Error(`Provider does not support streaming: ${v.provider}`);
@@ -127,9 +147,12 @@ export class HRI {
   }
 
   // Helper: aggregate streamed content to a single string
-  async streamToText(req: ChatRequest): Promise<string> {
+  async streamToText(target: string, init: Omit<ChatRequest, 'provider' | 'model'> & { stream?: true }): Promise<string>;
+  async streamToText(req: ChatRequest): Promise<string>;
+  async streamToText(reqOrTarget: ChatRequest | string, init?: Omit<ChatRequest, 'provider' | 'model'> & { stream?: true }): Promise<string> {
+    const normalized = this.normalizeInput(reqOrTarget as any, { ...(init as any), stream: true });
     let text = '';
-    for await (const c of this.streamChat({ ...req, stream: true })) {
+    for await (const c of this.streamChat({ ...normalized, stream: true })) {
       const delta = c.delta?.content;
       if (typeof delta === 'string') text += delta;
     }
@@ -278,4 +301,70 @@ export class HRI {
 
     throw new Error(`Exceeded max tool calls (${maxCalls}) during streamWithTools()`);
   }
+
+  // Verify if a model exists for a provider by querying /models when supported
+  async verifyModel(target: string | ChatRequest): Promise<{ exists: boolean; provider: ProviderId; model: string; models?: string[]; status?: number; error?: string }>{
+    const normalized = this.normalizeInput(target as any);
+    const { provider: pid, model } = normalized;
+    const provider = this.registry.get(pid);
+    if (!provider) throw new Error(`Provider not registered: ${pid}`);
+    const key = this.apiKeyFor(pid);
+    const base = this.baseUrlFor(pid);
+    // Prefer provider-implemented listModels
+    try {
+      if (provider.listModels) {
+        const models = await provider.listModels(key, base);
+        const exists = !!models?.includes(model);
+        return { exists, provider: pid, model, models };
+      }
+    } catch (e: any) {
+      return { exists: false, provider: pid, model, error: String(e?.message || e) };
+    }
+
+    // Fallback: attempt generic OpenAI v1 /models
+    if (!base) return { exists: false, provider: pid, model, error: 'Base URL is not configured for provider; cannot query /models.' };
+    try {
+      const url = joinUrl(base, '/models');
+      const headers: Record<string, string> = { 'Authorization': `Bearer ${key || ''}`, 'Accept': 'application/json' };
+      const res = await http(url, { method: 'GET', headers });
+      if (!res.ok) {
+        const text = await res.text();
+        const status = res.status;
+        let hint = 'Unknown error querying /models.';
+        if (status === 401) hint = 'Unauthorized: API key missing or invalid.';
+        else if (status === 403) hint = 'Forbidden: key lacks permission for /models.';
+        else if (status === 404) hint = 'Not found: base URL may be wrong (no /models).';
+        else if (status >= 500) hint = 'Provider server error (5xx).';
+        return { exists: false, provider: pid, model, status, error: `${hint} ${text}` };
+      }
+      const json: any = await res.json().catch(() => ({}));
+      const models: string[] = Array.isArray(json?.data) ? json.data.map((m: any) => m?.id).filter(Boolean) : Array.isArray(json) ? json.filter((x) => typeof x === 'string') : [];
+      const exists = !!models?.includes(model);
+      return { exists, provider: pid, model, models };
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      const corsHint = msg.includes('fetch failed') ? 'Network/CORS/proxy error while calling /models.' : '';
+      return { exists: false, provider: pid, model, error: [corsHint, msg].filter(Boolean).join(' ') };
+    }
+  }
+
+  // Internal: normalize various DX-friendly inputs to a strict ChatRequest
+  private normalizeInput(reqOrTarget: ChatRequest | string | TargetLike, init?: PartialChatInit): ChatRequest {
+    if (typeof reqOrTarget === 'string') {
+      const { provider, model } = normalizeProviderModel(reqOrTarget);
+      const base: any = { ...(init || {}) };
+      const messages = base.messages || [];
+      return { ...base, provider, model, messages } as ChatRequest;
+    }
+    const base: any = { ...(reqOrTarget as any), ...(init || {}) };
+    const { provider, model } = normalizeProviderModel(base as any);
+    const { target: _omit, ...rest } = base;
+    return { ...rest, provider, model } as ChatRequest;
+  }
+}
+// Helper type for overloads
+export interface PartialChatInit extends Partial<Omit<ChatRequest, 'provider' | 'model'>> {
+  provider?: string;
+  model?: string;
+  target?: string;
 }

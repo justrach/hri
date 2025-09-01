@@ -1,9 +1,10 @@
 import { http, joinUrl, parseSSE } from '../core/transport';
 import type { Provider, ChatRequest, ChatResponse, ChatStreamChunk, ChatMessage } from '../core/types';
 
-const DEFAULT_BASE = 'https://api.groq.com/openai/v1';
+// Generic OpenAI v1-compatible provider. Base URL must be provided via config or proxy.
+const DEFAULT_BASE: string | undefined = undefined;
 
-function toChatResponse(json: any, providerId: 'groq'): ChatResponse {
+function toChatResponse(json: any, providerId: 'v1'): ChatResponse {
   const choices = (json.choices ?? []).map((c: any, i: number) => ({
     index: c.index ?? i,
     message: (c.message ?? { role: 'assistant', content: '' }) as ChatMessage,
@@ -24,15 +25,15 @@ function mergeHeaders(a?: Record<string, string>, b?: Record<string, string>): R
   return { ...(a || {}), ...(b || {}) };
 }
 
-export class GroqProvider implements Provider {
-  id = 'groq' as const;
-  name = 'Groq (OpenAI-compatible)';
+export class V1Provider implements Provider {
+  id = 'v1' as const;
+  name = 'Generic V1 (OpenAI-compatible)';
   private isGpt5(model: string): boolean {
     try { return /(^|\/)gpt-5/i.test(model); } catch { return false; }
   }
 
   async chat(req: ChatRequest, apiKey?: string, baseUrl?: string): Promise<ChatResponse> {
-    const url = joinUrl(baseUrl || DEFAULT_BASE, '/chat/completions');
+    const url = joinUrl(baseUrl || (DEFAULT_BASE as string), '/chat/completions');
     const headers = mergeHeaders(
       {
         'Authorization': `Bearer ${apiKey || ''}`,
@@ -58,14 +59,14 @@ export class GroqProvider implements Provider {
     const res = await http(url, { method: 'POST', headers, body, signal: req.signal });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Groq error ${res.status}: ${text}`);
+      throw new Error(`V1 error ${res.status}: ${text}`);
     }
     const json = await res.json();
     return toChatResponse(json, this.id);
   }
 
   async *streamChat(req: ChatRequest, apiKey?: string, baseUrl?: string) {
-    const url = joinUrl(baseUrl || DEFAULT_BASE, '/chat/completions');
+    const url = joinUrl(baseUrl || (DEFAULT_BASE as string), '/chat/completions');
     const headers = mergeHeaders(
       {
         'Authorization': `Bearer ${apiKey || ''}`,
@@ -92,7 +93,7 @@ export class GroqProvider implements Provider {
     const res = await http(url, { method: 'POST', headers, body, signal: req.signal });
     if (!res.ok || !res.body) {
       const text = await res.text();
-      throw new Error(`Groq stream error ${res.status}: ${text}`);
+      throw new Error(`V1 stream error ${res.status}: ${text}`);
     }
 
     for await (const evt of parseSSE(res.body)) {
@@ -131,7 +132,7 @@ export class GroqProvider implements Provider {
   }
 
   async listModels(apiKey?: string, baseUrl?: string): Promise<string[]> {
-    const url = joinUrl(baseUrl || DEFAULT_BASE, '/models');
+    const url = joinUrl(baseUrl || (DEFAULT_BASE as string), '/models');
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${apiKey || ''}`,
       'Accept': 'application/json',
@@ -139,11 +140,15 @@ export class GroqProvider implements Provider {
     const res = await http(url, { method: 'GET', headers });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Groq models error ${res.status}: ${text}`);
+      throw new Error(`V1 models error ${res.status}: ${text}`);
     }
     const json: any = await res.json().catch(() => ({}));
-    if (Array.isArray(json?.data)) return json.data.map((m: any) => m?.id).filter(Boolean);
+    // Accept OpenAI-like { data: [{id: string}] } or plain array of ids
+    if (Array.isArray(json?.data)) {
+      return json.data.map((m: any) => m?.id).filter(Boolean);
+    }
     if (Array.isArray(json)) return json.filter((x) => typeof x === 'string');
     return [];
   }
 }
+

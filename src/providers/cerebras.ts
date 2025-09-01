@@ -1,9 +1,9 @@
 import { http, joinUrl, parseSSE } from '../core/transport';
 import type { Provider, ChatRequest, ChatResponse, ChatStreamChunk, ChatMessage } from '../core/types';
 
-const DEFAULT_BASE = 'https://api.groq.com/openai/v1';
+const DEFAULT_BASE = 'https://api.cerebras.ai/v1';
 
-function toChatResponse(json: any, providerId: 'groq'): ChatResponse {
+function toChatResponse(json: any, providerId: 'cerebras'): ChatResponse {
   const choices = (json.choices ?? []).map((c: any, i: number) => ({
     index: c.index ?? i,
     message: (c.message ?? { role: 'assistant', content: '' }) as ChatMessage,
@@ -24,9 +24,9 @@ function mergeHeaders(a?: Record<string, string>, b?: Record<string, string>): R
   return { ...(a || {}), ...(b || {}) };
 }
 
-export class GroqProvider implements Provider {
-  id = 'groq' as const;
-  name = 'Groq (OpenAI-compatible)';
+export class CerebrasProvider implements Provider {
+  id = 'cerebras' as const;
+  name = 'Cerebras (OpenAI-compatible)';
   private isGpt5(model: string): boolean {
     try { return /(^|\/)gpt-5/i.test(model); } catch { return false; }
   }
@@ -58,7 +58,7 @@ export class GroqProvider implements Provider {
     const res = await http(url, { method: 'POST', headers, body, signal: req.signal });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Groq error ${res.status}: ${text}`);
+      throw new Error(`Cerebras error ${res.status}: ${text}`);
     }
     const json = await res.json();
     return toChatResponse(json, this.id);
@@ -92,7 +92,7 @@ export class GroqProvider implements Provider {
     const res = await http(url, { method: 'POST', headers, body, signal: req.signal });
     if (!res.ok || !res.body) {
       const text = await res.text();
-      throw new Error(`Groq stream error ${res.status}: ${text}`);
+      throw new Error(`Cerebras stream error ${res.status}: ${text}`);
     }
 
     for await (const evt of parseSSE(res.body)) {
@@ -139,7 +139,7 @@ export class GroqProvider implements Provider {
     const res = await http(url, { method: 'GET', headers });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Groq models error ${res.status}: ${text}`);
+      throw new Error(`Cerebras models error ${res.status}: ${text}`);
     }
     const json: any = await res.json().catch(() => ({}));
     if (Array.isArray(json?.data)) return json.data.map((m: any) => m?.id).filter(Boolean);

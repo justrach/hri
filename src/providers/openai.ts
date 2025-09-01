@@ -135,4 +135,21 @@ export class OpenAIProvider implements Provider {
       }
     }
   }
+
+  async listModels(apiKey?: string, baseUrl?: string): Promise<string[]> {
+    const url = joinUrl(baseUrl || DEFAULT_BASE, '/models');
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${apiKey || ''}`,
+      'Accept': 'application/json',
+    };
+    const res = await http(url, { method: 'GET', headers });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`OpenAI models error ${res.status}: ${text}`);
+    }
+    const json: any = await res.json().catch(() => ({}));
+    if (Array.isArray(json?.data)) return json.data.map((m: any) => m?.id).filter(Boolean);
+    if (Array.isArray(json)) return json.filter((x) => typeof x === 'string');
+    return [];
+  }
 }
