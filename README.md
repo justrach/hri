@@ -36,9 +36,8 @@ import { HRI } from 'hri';
 
 const hri = HRI.createDefault();
 
-const res = await hri.chat({
-  provider: 'openai',
-  model: 'gpt-4o-mini',
+// Option A: DX-friendly target string (provider/model)
+const res = await hri.chat('openai/gpt-4o-mini', {
   messages: [
     { role: 'system', content: 'You are a concise assistant.' },
     { role: 'user', content: 'One sentence on hri?' },
@@ -47,9 +46,7 @@ const res = await hri.chat({
 console.log(res.choices[0]?.message?.content);
 
 // Streaming aggregate
-const text = await hri.streamToText({
-  provider: 'openai',
-  model: 'gpt-4o-mini',
+const text = await hri.streamToText('openai/gpt-4o-mini', {
   messages: [
     { role: 'system', content: 'You are a concise assistant.' },
     { role: 'user', content: 'List 3 bullet points about hri.' },
@@ -57,9 +54,29 @@ const text = await hri.streamToText({
   stream: true,
 });
 console.log(text);
+
+// Also supports multi-segment models when routed via another provider,
+// e.g. Groq serving OpenAI OSS models:
+await hri.chat('groq/openai/gpt-oss-20b', {
+  messages: [ { role: 'user', content: 'Hello OSS!' } ],
+});
+
+// Generic V1 provider: point to any OpenAI-compatible /v1 endpoint
+const hriV1 = HRI.createDefault({
+  baseUrls: { v1: process.env.V1_BASE_URL || 'https://your-host.example.com/v1' },
+  apiKeys: { v1: process.env.V1_API_KEY || 'YOUR_KEY' },
+});
+// Use 'v1/<model>' or multi-segment like 'v1/openai/gpt-oss-20b'
+await hriV1.chat('v1/openai/gpt-oss-20b', {
+  messages: [ { role: 'user', content: 'Hello from custom v1 endpoint!' } ],
+});
+
+// Check if a model exists via /models with helpful diagnostics
+const check = await hriV1.verifyModel('v1/openai/gpt-oss-20b');
+console.log('verifyModel:', check);
 ```
 
-Environment variables are read automatically if present (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.). With Bun, `.env` is auto-loaded. For Node, use `dotenv` if needed.
+Environment variables are read automatically if present (OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, SAMBANOVA_API_KEY, CEREBRAS_API_KEY, V1_API_KEY). With Bun, `.env` is auto-loaded. For Node, use `dotenv` if needed.
 
 ## Browser & Next.js
 
@@ -71,9 +88,7 @@ Direct calls from the browser to most providers require CORS handling. Use a sim
 import { HRI } from 'hri';
 
 const hri = HRI.createDefault({ proxy: '/api/llm' });
-await hri.chat({
-  provider: 'openai',
-  model: 'gpt-4o-mini',
+await hri.chat('openai/gpt-4o-mini', {
   messages: [ { role: 'user', content: 'Hello' } ],
 });
 ```
@@ -90,6 +105,42 @@ export async function POST(req: Request) {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  return new Response(resp.body, {
+    status: resp.status,
+    headers: { 'Content-Type': resp.headers.get('Content-Type') ?? 'application/json' },
+  });
+}
+```
+
+Generic v1-compatible route for custom endpoints:
+
+```ts
+// app/api/llm/v1/route.ts
+export const runtime = 'edge';
+
+export async function GET() {
+  // Proxy /models for verification and debugging
+  const resp = await fetch(`${process.env.V1_BASE_URL}/models`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${process.env.V1_API_KEY}` },
+  });
+  return new Response(resp.body, {
+    status: resp.status,
+    headers: { 'Content-Type': resp.headers.get('Content-Type') ?? 'application/json' },
+  });
+}
+
+export async function POST(req: Request) {
+  // Proxy /chat/completions for generic v1
+  const body = await req.json();
+  const resp = await fetch(`${process.env.V1_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.V1_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
