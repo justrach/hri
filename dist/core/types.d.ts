@@ -1,7 +1,18 @@
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
+export interface TextPart {
+    type: 'text';
+    text: string;
+}
+export interface ImageUrlPart {
+    type: 'image_url';
+    image_url: {
+        url: string;
+    };
+}
+export type ContentPart = TextPart | ImageUrlPart;
 export interface ChatMessage {
     role: Role;
-    content: string;
+    content: string | ContentPart[];
     name?: string;
     tool_call_id?: string;
     tool_calls?: ToolCall[];
@@ -76,8 +87,9 @@ export interface Provider {
     name: string;
     chat(req: ChatRequest, apiKey?: string, baseUrl?: string): Promise<ChatResponse>;
     streamChat?(req: ChatRequest, apiKey?: string, baseUrl?: string): Stream<ChatStreamChunk>;
+    listModels?(apiKey?: string, baseUrl?: string): Promise<string[]>;
 }
-export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'gemini' | 'openrouter' | 'sambanova';
+export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'gemini' | 'openrouter' | 'sambanova' | 'cerebras' | 'v1';
 export interface ClientConfig {
     defaultProvider?: ProviderId;
     defaultModel?: string;
@@ -85,4 +97,8 @@ export interface ClientConfig {
     baseUrls?: Partial<Record<ProviderId, string>>;
     headers?: Partial<Record<ProviderId, Record<string, string>>>;
     proxy?: string;
+    onUsage?: (usage: ChatResponse['usage'] | undefined, meta: {
+        provider: ProviderId;
+        model: string;
+    }) => void;
 }

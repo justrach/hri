@@ -5,4 +5,5 @@ export declare class GroqProvider implements Provider {
     private isGpt5;
     chat(req: ChatRequest, apiKey?: string, baseUrl?: string): Promise<ChatResponse>;
     streamChat(req: ChatRequest, apiKey?: string, baseUrl?: string): AsyncGenerator<ChatStreamChunk, void, unknown>;
+    listModels(apiKey?: string, baseUrl?: string): Promise<string[]>;
 }
