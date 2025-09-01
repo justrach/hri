@@ -128,7 +128,13 @@ export class HRI {
     if (!provider) throw new Error(`Provider not registered: ${v.provider}`);
     const key = this.apiKeyFor(provider.id);
     const base = this.baseUrlFor(provider.id);
-    return provider.chat({ ...v, stream: false }, key, base);
+    const res = await provider.chat({ ...v, stream: false }, key, base);
+    try {
+      this.config.onUsage?.(res.usage, { provider: provider.id, model: v.model });
+    } catch {
+      // user hook errors should not break flow
+    }
+    return res;
   }
 
   // Overloads for easier DX

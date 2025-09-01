@@ -1,4 +1,4 @@
-import { object, string, number, boolean, array, optional, record } from 'dhi';
+import { object, string, number, boolean, array, optional, record, union } from 'dhi';
 import type { ChatMessage, ChatRequest, ProviderId } from './types';
 
 const ToolCallSchema = object({
@@ -10,9 +10,20 @@ const ToolCallSchema = object({
   }),
 });
 
+// Multimodal content parts
+const TextPartSchema = object({
+  type: string(), // 'text'
+  text: string(),
+});
+const ImageUrlPartSchema = object({
+  type: string(), // 'image_url'
+  image_url: object({ url: string() }),
+});
+const ContentSchema = union([string(), array(union([TextPartSchema, ImageUrlPartSchema]))]);
+
 const ChatMessageSchema = object({
   role: string(),
-  content: string(),
+  content: ContentSchema,
   name: optional(string()),
   tool_call_id: optional(string()),
   tool_calls: optional(array(ToolCallSchema)),
@@ -30,9 +41,19 @@ export const ChatRequestSchema = object({
   extraHeaders: optional(record(string())),
 });
 
+const KNOWN_PROVIDERS_SET = new Set<ProviderId>([
+  'openai',
+  'anthropic',
+  'groq',
+  'gemini',
+  'openrouter',
+  'sambanova',
+  'cerebras',
+  'v1',
+]);
+
 export function ensureKnownProvider(id: string): asserts id is ProviderId {
-  const known: ProviderId[] = ['openai', 'anthropic', 'groq', 'gemini', 'openrouter', 'sambanova', 'cerebras'];
-  if (!known.includes(id as ProviderId)) {
+  if (!KNOWN_PROVIDERS_SET.has(id as ProviderId)) {
     throw new Error(`Unknown provider: ${id}`);
   }
 }

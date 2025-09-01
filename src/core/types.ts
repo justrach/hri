@@ -1,8 +1,14 @@
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
 
+// Multimodal content parts (OpenAI-compatible subset)
+export interface TextPart { type: 'text'; text: string }
+export interface ImageUrlPart { type: 'image_url'; image_url: { url: string } }
+export type ContentPart = TextPart | ImageUrlPart;
+
 export interface ChatMessage {
   role: Role;
-  content: string;
+  // Either a plain string or structured parts for multimodal (text + images)
+  content: string | ContentPart[];
   name?: string;
   tool_call_id?: string;
   // When assistant triggers tools (OpenAI-compatible)
@@ -100,4 +106,6 @@ export interface ClientConfig {
   baseUrls?: Partial<Record<ProviderId, string>>;
   headers?: Partial<Record<ProviderId, Record<string, string>>>;
   proxy?: string; // browser/Next.js proxy URL
+  // Optional hook to inspect/log token usage returned by providers
+  onUsage?: (usage: ChatResponse['usage'] | undefined, meta: { provider: ProviderId; model: string }) => void;
 }
