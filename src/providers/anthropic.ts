@@ -4,16 +4,54 @@ import type { Provider, ChatRequest, ChatResponse, ChatStreamChunk, ChatMessage 
 const DEFAULT_BASE = 'https://api.anthropic.com';
 const API_VERSION = '2023-06-01';
 
-function toAnthropicMessages(req: ChatRequest): { system?: string; messages: { role: 'user' | 'assistant'; content: string }[] } {
+type AnthropicTextBlock = { type: 'text'; text: string };
+type AnthropicImageBlock = { type: 'image'; source: { type: 'url'; media_type: string; url: string } };
+type AnthropicContentBlock = AnthropicTextBlock | AnthropicImageBlock;
+
+function toAnthropicMessages(
+  req: ChatRequest
+): { system?: string; messages: { role: 'user' | 'assistant'; content: AnthropicContentBlock[] }[] } {
   const systemParts: string[] = [];
-  const messages: { role: 'user' | 'assistant'; content: string }[] = [];
+  const messages: { role: 'user' | 'assistant'; content: AnthropicContentBlock[] }[] = [];
+
+  const toBlocks = (c: ChatMessage['content']): AnthropicContentBlock[] => {
+    if (typeof c === 'string') return c.trim() ? [{ type: 'text', text: c }] : [];
+    const blocks: AnthropicContentBlock[] = [];
+    for (const p of c || []) {
+      if (!p) continue;
+      if (p.type === 'text') {
+        if (p.text && p.text.length) blocks.push({ type: 'text', text: p.text });
+      } else if (p.type === 'image_url' && p.image_url?.url) {
+        // Best-effort media type guess by extension; fallback to generic
+        const url = p.image_url.url;
+        const lower = url.toLowerCase();
+        const media = lower.endsWith('.png')
+          ? 'image/png'
+          : lower.endsWith('.jpg') || lower.endsWith('.jpeg')
+          ? 'image/jpeg'
+          : lower.endsWith('.webp')
+          ? 'image/webp'
+          : 'image/*';
+        blocks.push({ type: 'image', source: { type: 'url', media_type: media, url } });
+      }
+    }
+    return blocks;
+  };
+
   for (const m of req.messages) {
     if (m.role === 'system') {
-      systemParts.push(m.content);
+      // System supports only text; flatten any text parts
+      const txt = toBlocks(m.content)
+        .filter((b): b is AnthropicTextBlock => b.type === 'text')
+        .map((b) => b.text)
+        .join('\n')
+        .trim();
+      if (txt) systemParts.push(txt);
     } else if (m.role === 'user' || m.role === 'assistant') {
-      messages.push({ role: m.role, content: m.content });
+      const content = toBlocks(m.content);
+      messages.push({ role: m.role, content });
     }
-    // ignore tool for now in stub
+    // ignore tool role for now
   }
   const system = systemParts.length ? systemParts.join('\n') : undefined;
   return { system, messages };
@@ -22,12 +60,20 @@ function toAnthropicMessages(req: ChatRequest): { system?: string; messages: { r
 function toChatResponse(json: any, providerId: 'anthropic', model: string): ChatResponse {
   const text = Array.isArray(json.content) ? json.content.map((b: any) => b.text || '').join('') : json.content?.[0]?.text || '';
   const msg: ChatMessage = { role: 'assistant', content: text };
+  const usage = json?.usage
+    ? {
+        prompt_tokens: json.usage.input_tokens,
+        completion_tokens: json.usage.output_tokens,
+        total_tokens: typeof json.usage.total_tokens === 'number' ? json.usage.total_tokens : (json.usage.input_tokens ?? 0) + (json.usage.output_tokens ?? 0),
+      }
+    : undefined;
   return {
     id: json.id ?? 'unknown',
     created: Math.floor(Date.now() / 1000),
     model: model,
     choices: [{ index: 0, message: msg, finish_reason: json.stop_reason ?? null }],
     provider: providerId,
+    usage,
     raw: json,
   };
 }
