@@ -1,4 +1,4 @@
-// Node-only optional undici dispatcher helper
+// Node-only undici dispatcher helper
 // Creates a per-origin Pool to maximize connection reuse in Node runtimes.
 
 let pools: Map<string, any> | undefined;
@@ -6,7 +6,9 @@ let pools: Map<string, any> | undefined;
 function isNode(): boolean {
   try {
     // eslint-disable-next-line no-undef
-    return typeof process !== 'undefined' && !!(process as any).versions?.node;
+    const p: any = typeof process !== 'undefined' ? process : undefined;
+    // Ensure we're on Node but NOT on Bun
+    return !!p?.versions?.node && !p?.versions?.bun;
   } catch {
     return false;
   }
@@ -23,13 +25,13 @@ function originFrom(url: string): string | undefined {
 
 export async function getUndiciDispatcher(url: string): Promise<any | undefined> {
   if (!isNode()) return undefined;
-  // Opt-in via env to avoid surprises in Bun/browsers
+  // Opt-out via env in Node (default is to try undici if available)
   try {
     // eslint-disable-next-line no-undef
-    const use = (typeof process !== 'undefined' && (process as any).env?.HRI_USE_UNDICI) === '1';
-    if (!use) return undefined;
+    const disable = (typeof process !== 'undefined' && (process as any).env?.HRI_USE_UNDICI) === '0';
+    if (disable) return undefined;
   } catch {
-    return undefined;
+    // ignore env read errors
   }
 
   const origin = originFrom(url);

@@ -16,6 +16,15 @@ import { getUndiciDispatcher } from './undici';
 
 export async function http(url: string, opts: RequestOptions = {}): Promise<Response> {
   const { method = 'POST', headers = {}, body, signal } = opts;
+  // Detect Node (not Bun) to decide whether to set keepalive explicitly
+  let isNodeNotBun = false;
+  try {
+    // eslint-disable-next-line no-undef
+    const p: any = typeof process !== 'undefined' ? process : undefined;
+    isNodeNotBun = !!p?.versions?.node && !p?.versions?.bun;
+  } catch {
+    isNodeNotBun = false;
+  }
   const init: RequestInit = {
     method,
     headers,
@@ -23,7 +32,8 @@ export async function http(url: string, opts: RequestOptions = {}): Promise<Resp
     signal,
     // Hint the runtime to reuse connections across sequential requests
     // to reduce TLS handshake/latency overhead in benchmarks.
-    keepalive: true,
+    // In Node, this can help with HTTP/1.1 servers; in Bun/Browser, omit to let runtime decide.
+    ...(isNodeNotBun ? { keepalive: true } : {}),
   } as RequestInit;
 
   // In Node, optionally use undici Pool dispatcher for stronger connection reuse.
