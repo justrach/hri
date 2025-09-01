@@ -1,6 +1,6 @@
 {
   "name": "hri",
-  "version": "0.0.1",
+  "version": "0.0.11",
   "description": "HRI: A TypeScript-native, browser/Next.js-friendly multi-LLM client (LiteLLM for JS) with DHI validation",
   "author": "Rach Pradhan",
   "license": "MIT",
@@ -14,12 +14,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/REPO_OWNER/REPO_NAME.git"
+    "url": "git+https://github.com/justrach/hri.git"
   },
-  "homepage": "https://github.com/REPO_OWNER/REPO_NAME#readme",
+  "homepage": "https://hri.trilok.ai",
   "bugs": {
-    "url": "https://github.com/REPO_OWNER/REPO_NAME/issues"
+    "url": "https://github.com/justrach/hri/issues"
+
   },
+  
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
