@@ -1,6 +1,6 @@
 {
   "name": "hri",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "HRI: A TypeScript-native, browser/Next.js-friendly multi-LLM client (LiteLLM for JS) with DHI validation",
   "author": "Rach Pradhan",
   "license": "MIT",
@@ -21,7 +21,7 @@
     "url": "https://github.com/justrach/hri/issues"
 
   },
-  
+
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -43,6 +43,7 @@
     "example:cerebras": "bun run examples/cerebras.ts",
     "example:groq-oss": "bun run examples/groq-oss.ts",
     "example:v1": "bun run examples/v1.ts",
+    "example:cancel": "bun run examples/stream-cancel.ts",
     "bench:node": "node --env-file=.env --import tsx examples/benchmark-openai.ts",
     "release:patch": "npm version patch && npm publish --cache .npm-cache",
     "release:minor": "npm version minor && npm publish --cache .npm-cache",
