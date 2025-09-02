@@ -57,7 +57,16 @@ export class OpenAIProvider implements Provider {
     if (req.json) {
       body.response_format = { type: 'json_object' };
     }
-    const res = await http(url, { method: 'POST', headers, body, signal: req.signal });
+    const res = await http(url, {
+      method: 'POST',
+      headers,
+      body,
+      signal: req.signal,
+      provider: this.id,
+      model: req.model,
+      stream: false,
+      telemetry: (req as any).__telemetry,
+    });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`OpenAI error ${res.status}: ${text}`);
@@ -93,13 +102,22 @@ export class OpenAIProvider implements Provider {
       body.response_format = { type: 'json_object' };
     }
 
-    const res = await http(url, { method: 'POST', headers, body, signal: req.signal });
+    const res = await http(url, {
+      method: 'POST',
+      headers,
+      body,
+      signal: req.signal,
+      provider: this.id,
+      model: req.model,
+      stream: true,
+      telemetry: (req as any).__telemetry,
+    });
     if (!res.ok || !res.body) {
       const text = await res.text();
       throw new Error(`OpenAI stream error ${res.status}: ${text}`);
     }
 
-    for await (const evt of parseSSE(res.body)) {
+    for await (const evt of parseSSE(res.body, { telemetry: (req as any).__telemetry, provider: this.id, model: req.model })) {
       if (!evt || !evt.data) continue;
       if (evt.data === '[DONE]') {
         return;

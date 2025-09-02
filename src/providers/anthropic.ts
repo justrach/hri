@@ -99,7 +99,16 @@ export class AnthropicProvider implements Provider {
       system,
       messages,
     };
-    const res = await http(url, { method: 'POST', headers, body, signal: req.signal });
+    const res = await http(url, {
+      method: 'POST',
+      headers,
+      body,
+      signal: req.signal,
+      provider: this.id,
+      model: req.model,
+      stream: false,
+      telemetry: (req as any).__telemetry,
+    });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Anthropic error ${res.status}: ${text}`);
@@ -127,12 +136,21 @@ export class AnthropicProvider implements Provider {
       messages,
       stream: true,
     };
-    const res = await http(url, { method: 'POST', headers, body, signal: req.signal });
+    const res = await http(url, {
+      method: 'POST',
+      headers,
+      body,
+      signal: req.signal,
+      provider: this.id,
+      model: req.model,
+      stream: true,
+      telemetry: (req as any).__telemetry,
+    });
     if (!res.ok || !res.body) {
       const text = await res.text();
       throw new Error(`Anthropic stream error ${res.status}: ${text}`);
     }
-    for await (const evt of parseSSE(res.body)) {
+    for await (const evt of parseSSE(res.body, { telemetry: (req as any).__telemetry, provider: this.id, model: req.model })) {
       if (!evt || !evt.data) continue;
       try {
         const json = JSON.parse(evt.data);
