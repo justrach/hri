@@ -128,7 +128,7 @@ export class HRI {
     if (!provider) throw new Error(`Provider not registered: ${v.provider}`);
     const key = this.apiKeyFor(provider.id);
     const base = this.baseUrlFor(provider.id);
-    const res = await provider.chat({ ...v, stream: false }, key, base);
+    const res = await provider.chat({ ...v, stream: false, __telemetry: this.config.telemetry }, key, base);
     try {
       this.config.onUsage?.(res.usage, { provider: provider.id, model: v.model });
     } catch {
@@ -149,7 +149,7 @@ export class HRI {
     }
     const key = this.apiKeyFor(provider.id);
     const base = this.baseUrlFor(provider.id);
-    return provider.streamChat(v, key, base);
+    return provider.streamChat({ ...v, __telemetry: this.config.telemetry }, key, base);
   }
 
   // Helper: aggregate streamed content to a single string
@@ -205,7 +205,16 @@ export class HRI {
         let out: any;
         try {
           if (!handler) throw new Error(`No handler for tool: ${name}`);
-          out = await handler(args);
+          const t = this.config.telemetry;
+          const hook = t?.toolStart?.({ name });
+          const start = Date.now();
+          try {
+            out = await handler(args);
+            try { hook?.end?.({ durationMs: Date.now() - start }); } catch {}
+          } catch (e) {
+            try { hook?.recordError?.(e); } catch {}
+            throw e;
+          }
         } catch (e: any) {
           out = { error: String(e?.message || e) };
         }
@@ -286,7 +295,16 @@ export class HRI {
         let out: any;
         try {
           if (!handler) throw new Error(`No handler for tool: ${tc.function.name}`);
-          out = await handler(args);
+          const t = this.config.telemetry;
+          const hook = t?.toolStart?.({ name: tc.function.name });
+          const start = Date.now();
+          try {
+            out = await handler(args);
+            try { hook?.end?.({ durationMs: Date.now() - start }); } catch {}
+          } catch (e) {
+            try { hook?.recordError?.(e); } catch {}
+            throw e;
+          }
         } catch (e: any) {
           out = { error: String(e?.message || e) };
         }

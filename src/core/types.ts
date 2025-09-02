@@ -47,6 +47,9 @@ export interface ChatRequest {
   // OpenAI-compatible tool support (optional)
   tools?: ToolDef[];
   tool_choice?: 'auto' | 'none' | 'required' | { type: 'function'; function: { name: string } };
+  // Internal: optional telemetry propagation (not part of public surface)
+  __telemetry?: TelemetryHooks;
+  __requestId?: string;
 }
 
 export interface ChatResponseChoice {
@@ -108,4 +111,34 @@ export interface ClientConfig {
   proxy?: string; // browser/Next.js proxy URL
   // Optional hook to inspect/log token usage returned by providers
   onUsage?: (usage: ChatResponse['usage'] | undefined, meta: { provider: ProviderId; model: string }) => void;
+  // Optional observability hooks (no-op by default)
+  telemetry?: TelemetryHooks;
+  // Guard capturing of prompt/response bodies in any adapters
+  captureBodies?: boolean;
+}
+
+// Minimal, OTEL-agnostic telemetry hook surface
+export interface TelemetryHooks {
+  requestStart(info: {
+    url: string;
+    method?: string;
+    provider?: ProviderId;
+    model?: string;
+    stream?: boolean;
+    requestId?: string;
+  }): {
+    end(extra?: { status?: number; ok?: boolean; sizeBytes?: number; durationMs?: number }): void;
+    recordError(err: unknown): void;
+  };
+
+  streamStart(info: { provider?: ProviderId; model?: string; requestId?: string }): {
+    firstByte(): void;
+    chunk(count?: number): void; // default 1
+    end(extra?: { chunkCount?: number; durationMs?: number; completed?: boolean }): void;
+  };
+
+  toolStart(info: { name: string; requestId?: string }): {
+    end(extra?: { durationMs?: number }): void;
+    recordError(err: unknown): void;
+  };
 }

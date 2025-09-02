@@ -1,10 +1,17 @@
 export type HeadersInit = Record<string, string>;
+import type { ProviderId, TelemetryHooks } from './types';
 
 export interface RequestOptions {
   method?: string;
   headers?: HeadersInit;
   body?: any;
   signal?: AbortSignal;
+  // Optional telemetry/meta (no-op if undefined)
+  provider?: ProviderId;
+  model?: string;
+  stream?: boolean;
+  requestId?: string;
+  telemetry?: TelemetryHooks;
 }
 
 export function joinUrl(base: string, path: string): string {
@@ -16,6 +23,16 @@ import { getUndiciDispatcher } from './undici';
 
 export async function http(url: string, opts: RequestOptions = {}): Promise<Response> {
   const { method = 'POST', headers = {}, body, signal } = opts;
+  const t = opts.telemetry;
+  const startedAt = Date.now();
+  const reqHook = t?.requestStart?.({
+    url,
+    method,
+    provider: opts.provider,
+    model: opts.model,
+    stream: opts.stream,
+    requestId: opts.requestId,
+  });
   // Detect Node (not Bun) to decide whether to set keepalive explicitly
   let isNodeNotBun = false;
   try {
@@ -42,7 +59,23 @@ export async function http(url: string, opts: RequestOptions = {}): Promise<Resp
     (init as any).dispatcher = dispatcher;
   }
 
-  return fetch(url, init);
+  try {
+    const res = await fetch(url, init);
+    try {
+      reqHook?.end?.({
+        status: (res as Response).status,
+        ok: (res as Response).ok,
+        sizeBytes: Number((res as Response).headers?.get?.('content-length') || '') || undefined,
+        durationMs: Date.now() - startedAt,
+      });
+    } catch {
+      // never throw from telemetry
+    }
+    return res;
+  } catch (e) {
+    try { reqHook?.recordError?.(e); } catch {}
+    throw e;
+  }
 }
 
 export async function* readLines(stream: ReadableStream<Uint8Array>): AsyncGenerator<string> {
@@ -69,13 +102,30 @@ export async function* readLines(stream: ReadableStream<Uint8Array>): AsyncGener
   }
 }
 
-export async function* parseSSE(stream: ReadableStream<Uint8Array>): AsyncGenerator<{ event?: string; data?: string } | null> {
+export async function* parseSSE(
+  stream: ReadableStream<Uint8Array>,
+  meta?: { telemetry?: TelemetryHooks; provider?: ProviderId; model?: string; requestId?: string }
+): AsyncGenerator<{ event?: string; data?: string } | null> {
+  const t = meta?.telemetry;
+  const startedAt = Date.now();
+  const sHook = t?.streamStart?.({ provider: meta?.provider, model: meta?.model, requestId: meta?.requestId });
+  let firstByteSeen = false;
+  let chunks = 0;
   let dataLines: string[] = [];
   let event: string | undefined;
   for await (const line of readLines(stream)) {
+    if (!firstByteSeen) {
+      firstByteSeen = true;
+      try { sHook?.firstByte?.(); } catch {}
+    }
     if (line === '') {
       const data = dataLines.length ? dataLines.join('\n') : undefined;
-      yield data || event ? { event, data } : null;
+      const out = data || event ? { event, data } : null;
+      if (out && (out as any).data != null) {
+        chunks += 1;
+        try { sHook?.chunk?.(1); } catch {}
+      }
+      yield out;
       dataLines = [];
       event = undefined;
       continue;
