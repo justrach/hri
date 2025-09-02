@@ -1,6 +1,6 @@
 {
   "name": "hri",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "HRI: A TypeScript-native, browser/Next.js-friendly multi-LLM client (LiteLLM for JS) with DHI validation",
   "author": "Rach Pradhan",
   "license": "MIT",
